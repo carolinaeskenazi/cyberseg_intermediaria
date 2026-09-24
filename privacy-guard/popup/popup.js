@@ -9,11 +9,15 @@ browser.tabs.query({
         return;
     }
 
-    // Mostra a URL atual.
+    // URL atual
     document.getElementById("page-url").textContent =
         currentTab.url || "URL indisponível";
 
-    // Solicita os dados coletados pelo background.
+
+    // =========================================
+    // DOMÍNIOS DE TERCEIRA PARTE
+    // =========================================
+
     const data = await browser.runtime.sendMessage({
         action: "getTabData",
         tabId: currentTab.id
@@ -23,7 +27,6 @@ browser.tabs.query({
         data.thirdPartyDomains || {}
     );
 
-    // Quantidade de domínios diferentes encontrados.
     document.getElementById(
         "third-party-count"
     ).textContent = domains.length;
@@ -36,26 +39,58 @@ browser.tabs.query({
     if (domains.length === 0) {
 
         const item = document.createElement("li");
+
         item.textContent =
             "Nenhum domínio de terceira parte detectado.";
 
         list.appendChild(item);
 
-        return;
+    } else {
+
+        domains.sort(
+            (a, b) => b.requests - a.requests
+        );
+
+        domains.forEach((domain) => {
+
+            const item = document.createElement("li");
+
+            item.textContent =
+                `${domain.domain} (${domain.requests} requisições)`;
+
+            list.appendChild(item);
+        });
     }
 
-    // Ordena pelos domínios com mais requisições.
-    domains.sort(
-        (a, b) => b.requests - a.requests
-    );
 
-    domains.forEach((domain) => {
+    // =========================================
+    // COOKIES
+    // =========================================
 
-        const item = document.createElement("li");
+    const cookieData =
+        await browser.runtime.sendMessage({
+            action: "getCookies",
+            tabId: currentTab.id
+        });
 
-        item.textContent =
-            `${domain.domain} (${domain.requests} requisições)`;
+    document.getElementById(
+        "cookie-total"
+    ).textContent = cookieData.total;
 
-        list.appendChild(item);
-    });
+    document.getElementById(
+        "cookie-first-party"
+    ).textContent = cookieData.firstParty;
+
+    document.getElementById(
+        "cookie-third-party"
+    ).textContent = cookieData.thirdParty;
+
+    document.getElementById(
+        "cookie-session"
+    ).textContent = cookieData.session;
+
+    document.getElementById(
+        "cookie-persistent"
+    ).textContent = cookieData.persistent;
+
 });

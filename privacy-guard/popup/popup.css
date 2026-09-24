@@ -63,3 +63,17 @@ h2 {
     font-size: 12px;
     word-break: break-all;
 }
+
+.cookie-details {
+    margin: 5px 0 10px 15px;
+    padding-left: 10px;
+    border-left: 2px solid #ddd;
+}
+
+.subitem {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 12px;
+    color: #555;
+}
