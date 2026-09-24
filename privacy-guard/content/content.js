@@ -1,0 +1,1 @@
+console.log("[Privacy Guard] Content script carregado.");

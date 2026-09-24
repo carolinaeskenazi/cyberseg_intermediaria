@@ -1,0 +1,34 @@
+{
+  "manifest_version": 2,
+  "name": "Privacy Guard",
+  "version": "0.1.0",
+  "description": "Extensão para análise de privacidade e detecção de mecanismos de rastreamento em páginas web.",
+
+  "permissions": [
+    "tabs",
+    "cookies",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+
+  "background": {
+    "scripts": [
+      "background/background.js"
+    ]
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+
+  "browser_action": {
+    "default_title": "Privacy Guard",
+    "default_popup": "popup/popup.html"
+  }
+}

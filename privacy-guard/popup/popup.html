@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Privacy Guard</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <main class="container">
+        <h1>Privacy Guard</h1>
+
+        <p class="status">
+            Extensão ativa
+        </p>
+
+        <section>
+            <h2>Página atual</h2>
+            <p id="page-url">Carregando...</p>
+        </section>
+
+        <section class="score">
+            <h2>Privacy Score</h2>
+            <strong>-- / 100</strong>
+        </section>
+
+        <section>
+            <h2>Detecções</h2>
+
+            <div class="item">
+                <span>Domínios de terceira parte</span>
+                <span>--</span>
+            </div>
+
+            <div class="item">
+                <span>Cookies</span>
+                <span>--</span>
+            </div>
+
+            <div class="item">
+                <span>Storage</span>
+                <span>--</span>
+            </div>
+
+            <div class="item">
+                <span>Canvas fingerprinting</span>
+                <span>--</span>
+            </div>
+        </section>
+    </main>
+
+    <script src="popup.js"></script>
+</body>
+</html>
