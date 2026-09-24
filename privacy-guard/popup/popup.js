@@ -93,4 +93,73 @@ browser.tabs.query({
         "cookie-persistent"
     ).textContent = cookieData.persistent;
 
+    // =========================================
+    // STORAGE HTML5
+    // =========================================
+
+    try {
+
+        const storageData =
+            await browser.tabs.sendMessage(
+                currentTab.id,
+                {
+                    action: "getStorageData"
+                }
+            );
+
+        const hasStorage =
+            storageData.localStorage.detected ||
+            storageData.sessionStorage.detected ||
+            storageData.indexedDB.detected;
+
+
+        document.getElementById(
+            "storage-status"
+        ).textContent = hasStorage
+            ? "Detectado"
+            : "Não detectado";
+
+
+        // LOCAL STORAGE
+
+        document.getElementById(
+            "local-storage"
+        ).textContent =
+            storageData.localStorage.detected
+                ? `${storageData.localStorage.count} item(ns)`
+                : "Não detectado";
+
+
+        // SESSION STORAGE
+
+        document.getElementById(
+            "session-storage"
+        ).textContent =
+            storageData.sessionStorage.detected
+                ? `${storageData.sessionStorage.count} item(ns)`
+                : "Não detectado";
+
+
+        // INDEXEDDB
+
+        document.getElementById(
+            "indexed-db"
+        ).textContent =
+            storageData.indexedDB.detected
+                ? `${storageData.indexedDB.count} banco(s)`
+                : "Não detectado";
+
+
+    } catch (error) {
+
+        console.error(
+            "[Privacy Guard] Erro obtendo storage:",
+            error
+        );
+
+        document.getElementById(
+            "storage-status"
+        ).textContent = "Indisponível";
+    }
+
 });
