@@ -218,9 +218,14 @@ browser.tabs.query({
 
                 const item = document.createElement("li");
 
+                const date = new Date(event.timestamp);
+
                 const time =
-                    new Date(event.timestamp)
-                        .toLocaleTimeString();
+                    date.toLocaleTimeString("pt-BR", {
+                        hour12: false
+                    }) +
+                    "." +
+                    String(date.getMilliseconds()).padStart(3, "0");
 
                 item.textContent =
                     `${index + 1}. ${event.operation} — ${time}`;
