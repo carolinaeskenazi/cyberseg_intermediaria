@@ -22,37 +22,63 @@ canvasScript.onload = function () {
 //Coleta informações sobre armazenamento HTML5 da página.
 
 async function collectStorageData() {
+
     const storageData = {
+
+        // Contexto em que o storage foi observado
+        context: {
+            origin: window.location.origin,
+            hostname: window.location.hostname,
+            url: window.location.href,
+            isTopFrame: window === window.top
+        },
+
         localStorage: {
             detected: false,
-            count: 0
+            count: 0,
+            accessible: false
         },
 
         sessionStorage: {
             detected: false,
-            count: 0
+            count: 0,
+            accessible: false
         },
 
         indexedDB: {
             detected: false,
             count: 0,
+            accessible: false,
             databases: []
         }
     };
+
 
     // =========================================
     // LOCAL STORAGE
     // =========================================
 
     try {
-        const localCount = localStorage.length;
 
-        storageData.localStorage.count = localCount;
-        storageData.localStorage.detected = localCount > 0;
+        const localCount =
+            localStorage.length;
+
+        storageData.localStorage.accessible =
+            true;
+
+        storageData.localStorage.count =
+            localCount;
+
+        storageData.localStorage.detected =
+            localCount > 0;
 
     } catch (error) {
+
+        storageData.localStorage.accessible =
+            false;
+
         console.warn(
-            "[Privacy Guard] Não foi possível acessar localStorage:",
+            "[Privacy Guard] localStorage bloqueado/indisponível:",
             error
         );
     }
@@ -63,31 +89,44 @@ async function collectStorageData() {
     // =========================================
 
     try {
-        const sessionCount = sessionStorage.length;
 
-        storageData.sessionStorage.count = sessionCount;
+        const sessionCount =
+            sessionStorage.length;
+
+        storageData.sessionStorage.accessible =
+            true;
+
+        storageData.sessionStorage.count =
+            sessionCount;
+
         storageData.sessionStorage.detected =
             sessionCount > 0;
 
     } catch (error) {
+
+        storageData.sessionStorage.accessible =
+            false;
+
         console.warn(
-            "[Privacy Guard] Não foi possível acessar sessionStorage:",
+            "[Privacy Guard] sessionStorage bloqueado/indisponível:",
             error
         );
     }
 
 
     // =========================================
-    // INDEXEDDB
+    // INDEXED DB
     // =========================================
 
     try {
 
-       
         if (indexedDB.databases) {
 
             const databases =
                 await indexedDB.databases();
+
+            storageData.indexedDB.accessible =
+                true;
 
             storageData.indexedDB.count =
                 databases.length;
@@ -97,20 +136,72 @@ async function collectStorageData() {
 
             storageData.indexedDB.databases =
                 databases.map((database) => ({
-                    name: database.name || "Sem nome",
-                    version: database.version || null
+                    name:
+                        database.name || "Sem nome",
+
+                    version:
+                        database.version || null
                 }));
+
+        } else {
+
+            /*
+             * IndexedDB existe, mas databases()
+             * não está disponível.
+             */
+            storageData.indexedDB.accessible =
+                typeof indexedDB !== "undefined";
         }
 
     } catch (error) {
 
+        storageData.indexedDB.accessible =
+            false;
+
         console.warn(
-            "[Privacy Guard] Não foi possível consultar IndexedDB:",
+            "[Privacy Guard] IndexedDB bloqueado/indisponível:",
             error
         );
     }
 
+
     return storageData;
+}
+
+async function reportStorageToBackground() {
+    try {
+        const storageData = await collectStorageData();
+
+        await browser.runtime.sendMessage({
+            action: "reportFrameStorage",
+            storageData: storageData
+        });
+
+    } catch (error) {
+        console.warn(
+            "[Privacy Guard] Erro ao reportar storage do frame:",
+            error
+        );
+    }
+}
+
+// =========================================
+// REPORTA STORAGE DESTE FRAME AO BACKGROUND
+// =========================================
+
+if (document.readyState === "loading") {
+
+    window.addEventListener(
+        "DOMContentLoaded",
+        () => {
+            reportStorageToBackground();
+        },
+        { once: true }
+    );
+
+} else {
+
+    reportStorageToBackground();
 }
 
 const canvasEvents = {

@@ -7,7 +7,7 @@ console.log("[Privacy Guard] Background iniciado.");
 
 const tabData = {};
 const trackingData = {};
-
+const frameStorageData = {};
 
 // ============================================================
 // FUNÇÕES AUXILIARES
@@ -401,6 +401,9 @@ browser.webRequest.onBeforeRequest.addListener(
              * trackingData NÃO é apagado aqui, pois precisamos
              * preservar o histórico A -> B -> A.
              */
+
+            frameStorageData[details.tabId] = {};
+            
             tabData[details.tabId] = {
                 pageDomain:
                     requestDomain,
@@ -960,13 +963,45 @@ function detectCookieSync(tabId) {
 
 browser.runtime.onMessage.addListener(
 
-    (message) => {
+    (message, sender) => {
 
 
         // ====================================================
         // DADOS DA ABA
         // ====================================================
 
+        if (message.action === "reportFrameStorage") {
+
+            if (!sender.tab) {
+                return;
+            }
+
+            const tabId = sender.tab.id;
+
+            if (!frameStorageData[tabId]) {
+                frameStorageData[tabId] = {};
+            }
+
+            const frameId =
+                sender.frameId !== undefined
+                    ? sender.frameId
+                    : 0;
+
+            frameStorageData[tabId][frameId] = {
+                frameId: frameId,
+                ...message.storageData
+            };
+
+            return Promise.resolve({
+                success: true
+            });
+        }
+        if (message.action === "getFrameStorageData") {
+
+            return Promise.resolve(
+                frameStorageData[message.tabId] || {}
+            );
+        }
         if (
             message.action ===
             "getTabData"
@@ -1076,5 +1111,7 @@ browser.tabs.onRemoved.addListener(
         delete trackingData[
             tabId
         ];
+
+        delete frameStorageData[tabId];
     }
 );

@@ -162,6 +162,93 @@ browser.tabs.query({
         ).textContent = "Indisponível";
     }
 
+    // =========================================
+    // STORAGE POR FRAME / ORIGEM
+    // =========================================
+
+    try {
+
+        const frameStorage =
+            await browser.runtime.sendMessage({
+                action: "getFrameStorageData",
+                tabId: currentTab.id
+            });
+
+        const frameList =
+            document.getElementById(
+                "frame-storage-list"
+            );
+
+        frameList.innerHTML = "";
+
+        const frames =
+            Object.values(frameStorage);
+
+        if (frames.length === 0) {
+
+            const item =
+                document.createElement("li");
+
+            item.textContent =
+                "Nenhum contexto adicional observado.";
+
+            frameList.appendChild(item);
+
+        } else {
+
+            frames.sort(
+                (a, b) =>
+                    a.frameId - b.frameId
+            );
+
+            frames.forEach((frame) => {
+
+                const item =
+                    document.createElement("li");
+
+                const context =
+                    frame.context || {};
+
+                const frameType =
+                    context.isTopFrame
+                        ? "TOP"
+                        : "IFRAME";
+
+                const localStatus =
+                    frame.localStorage.accessible
+                        ? `${frame.localStorage.count} item(ns)`
+                        : "bloqueado/indisponível";
+
+                const sessionStatus =
+                    frame.sessionStorage.accessible
+                        ? `${frame.sessionStorage.count} item(ns)`
+                        : "bloqueado/indisponível";
+
+                const indexedStatus =
+                    frame.indexedDB.accessible
+                        ? `${frame.indexedDB.count} banco(s)`
+                        : "bloqueado/indisponível";
+
+
+                item.textContent =
+                    `${frameType} — ` +
+                    `${context.hostname || "origem desconhecida"} | ` +
+                    `localStorage: ${localStatus} | ` +
+                    `sessionStorage: ${sessionStatus} | ` +
+                    `IndexedDB: ${indexedStatus}`;
+
+                frameList.appendChild(item);
+            });
+        }
+
+    } catch (error) {
+
+        console.error(
+            "[Privacy Guard] Erro obtendo storage dos frames:",
+            error
+        );
+    }
+
 
     // =========================================
     // CANVAS FINGERPRINTING
