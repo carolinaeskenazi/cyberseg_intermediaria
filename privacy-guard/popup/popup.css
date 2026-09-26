@@ -83,3 +83,24 @@ h2 {
     padding-left: 10px;
     border-left: 2px solid #ddd;
 }
+
+.canvas-details {
+    margin: 5px 0 10px 15px;
+    padding-left: 10px;
+    border-left: 2px solid #ddd;
+}
+
+#canvas-events-section {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+#canvas-events {
+    padding-left: 18px;
+    max-height: 130px;
+    overflow-y: auto;
+}
+
+#canvas-events li {
+    margin: 4px 0;
+}

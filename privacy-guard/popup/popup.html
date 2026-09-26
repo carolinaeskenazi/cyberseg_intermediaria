@@ -91,7 +91,31 @@
 
             <div class="item">
                 <span>Canvas fingerprinting</span>
-                <span>--</span>
+                <span id="canvas-status">--</span>
+            </div>
+
+            <div class="canvas-details">
+
+                <div class="subitem">
+                    <span>toDataURL()</span>
+                    <span id="canvas-data-url">0</span>
+                </div>
+
+                <div class="subitem">
+                    <span>toBlob()</span>
+                    <span id="canvas-blob">0</span>
+                </div>
+
+                <div class="subitem">
+                    <span>getImageData()</span>
+                    <span id="canvas-image-data">0</span>
+                </div>
+
+            </div>
+
+            <div id="canvas-events-section">
+                <strong>Eventos detectados</strong>
+                <ul id="canvas-events"></ul>
             </div>
         </section>
     </main>

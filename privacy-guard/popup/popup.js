@@ -162,4 +162,100 @@ browser.tabs.query({
         ).textContent = "Indisponível";
     }
 
+
+    // =========================================
+    // CANVAS FINGERPRINTING
+    // =========================================
+
+    try {
+
+        const canvasData =
+            await browser.tabs.sendMessage(
+                currentTab.id,
+                {
+                    action: "getCanvasData"
+                }
+            );
+
+
+        document.getElementById(
+            "canvas-status"
+        ).textContent =
+            canvasData.detected
+                ? "Possível"
+                : "Não detectado";
+
+
+        document.getElementById(
+            "canvas-data-url"
+        ).textContent =
+            canvasData.operations.toDataURL;
+
+
+        document.getElementById(
+            "canvas-blob"
+        ).textContent =
+            canvasData.operations.toBlob;
+
+
+        document.getElementById(
+            "canvas-image-data"
+        ).textContent =
+            canvasData.operations.getImageData;
+
+        
+        const canvasEventsList =
+            document.getElementById("canvas-events");
+
+        canvasEventsList.innerHTML = "";
+
+        if (
+            canvasData.events &&
+            canvasData.events.length > 0
+        ) {
+
+            canvasData.events.forEach((event, index) => {
+
+                const item = document.createElement("li");
+
+                const time =
+                    new Date(event.timestamp)
+                        .toLocaleTimeString();
+
+                item.textContent =
+                    `${index + 1}. ${event.operation} — ${time}`;
+
+                /*
+                * Stack completo fica disponível no tooltip.
+                */
+                if (event.stack) {
+                    item.title = event.stack;
+                }
+
+                canvasEventsList.appendChild(item);
+            });
+
+        } else {
+
+            const item = document.createElement("li");
+
+            item.textContent =
+                "Nenhum evento de Canvas detectado.";
+
+            canvasEventsList.appendChild(item);
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "[Privacy Guard] Erro obtendo Canvas:",
+            error
+        );
+
+        document.getElementById(
+            "canvas-status"
+        ).textContent = "Indisponível";
+    }
+
 });

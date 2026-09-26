@@ -1,5 +1,24 @@
 console.log("[Privacy Guard] Content script carregado.");
 
+// =========================================
+// CANVAS MONITOR
+// =========================================
+
+const canvasScript = document.createElement("script");
+
+canvasScript.src =
+    browser.runtime.getURL(
+        "content/canvas-monitor.js"
+    );
+
+canvasScript.onload = function () {
+    this.remove();
+};
+
+(document.head || document.documentElement)
+    .appendChild(canvasScript);
+
+
 //Coleta informações sobre armazenamento HTML5 da página.
 
 async function collectStorageData() {
@@ -94,6 +113,52 @@ async function collectStorageData() {
     return storageData;
 }
 
+const canvasEvents = {
+    toDataURL: 0,
+    toBlob: 0,
+    getImageData: 0,
+    events: []
+};
+
+
+window.addEventListener("message", (event) => {
+
+    if (event.source !== window) {
+        return;
+    }
+
+    const data = event.data;
+
+    if (
+        !data ||
+        data.source !== "privacy-guard" ||
+        data.type !== "canvas-operation"
+    ) {
+        return;
+    }
+
+    if (
+        Object.prototype.hasOwnProperty.call(
+            canvasEvents,
+            data.operation
+        )
+    ) {
+
+        canvasEvents[data.operation]++;
+
+        canvasEvents.events.push({
+            operation: data.operation,
+            timestamp: data.timestamp,
+            stack: data.stack
+        });
+
+        console.log(
+            "[Privacy Guard] Canvas:",
+            data.operation
+        );
+    }
+
+});
 
 //O popup solicita os dados ao content script.
 
@@ -102,6 +167,30 @@ browser.runtime.onMessage.addListener((message) => {
 
     if (message.action === "getStorageData") {
         return collectStorageData();
+    }
+
+
+    if (message.action === "getCanvasData") {
+
+        const total =
+            canvasEvents.toDataURL +
+            canvasEvents.toBlob +
+            canvasEvents.getImageData;
+
+        return Promise.resolve({
+
+            detected: total > 0,
+
+            total: total,
+
+            operations: {
+                toDataURL: canvasEvents.toDataURL,
+                toBlob: canvasEvents.toBlob,
+                getImageData: canvasEvents.getImageData
+            },
+
+            events: canvasEvents.events
+        });
     }
 
 });
