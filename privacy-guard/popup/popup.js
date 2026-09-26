@@ -263,4 +263,160 @@ browser.tabs.query({
         ).textContent = "Indisponível";
     }
 
+    // =========================================
+    // COOKIE SYNC / BOUNCE TRACKING
+    // =========================================
+
+    try {
+
+        const trackingData =
+            await browser.runtime.sendMessage({
+                action: "getTrackingData",
+                tabId: currentTab.id
+            });
+
+
+        document.getElementById(
+            "bounce-status"
+        ).textContent =
+            trackingData.bounceDetected
+                ? "Possível"
+                : "Não detectado";
+
+
+        document.getElementById(
+            "cookie-sync-status"
+        ).textContent =
+            trackingData.cookieSyncDetected
+                ? "Possível"
+                : "Não detectado";
+
+
+        document.getElementById(
+            "redirect-count"
+        ).textContent =
+            trackingData.redirects.length;
+
+
+        document.getElementById(
+            "tracking-param-count"
+        ).textContent =
+            trackingData.suspiciousParams.length;
+
+
+        const list =
+            document.getElementById(
+                "tracking-events"
+            );
+
+        list.innerHTML = "";
+
+
+        // Redirecionamentos
+
+        trackingData.redirects.forEach(
+            (redirect) => {
+
+                const item =
+                    document.createElement("li");
+
+                item.textContent =
+                    `Redirect: ${redirect.from} → ${redirect.to}`;
+
+                list.appendChild(item);
+            }
+        );
+
+        // Bounce tracking
+
+        trackingData.bounceEvents.forEach(
+            (event) => {
+
+                const item =
+                    document.createElement("li");
+
+                item.textContent =
+                    `Possível bounce: ${event.from} → ${event.bounce} → ${event.to}`;
+
+                list.appendChild(item);
+            }
+        );
+
+        // Identificadores observados no fluxo de bounce
+
+        (trackingData.bounceIdentifiers || []).forEach(
+            (identifier) => {
+
+                const item =
+                    document.createElement("li");
+
+                item.textContent =
+                    `UID via ${identifier.storageType}: ` +
+                    `${identifier.value} (${identifier.domain})`;
+
+                list.appendChild(item);
+            }
+        );
+
+
+        // Cookie sync
+
+        trackingData.cookieSyncEvents.forEach(
+            (event) => {
+
+                const item =
+                    document.createElement("li");
+
+                item.textContent =
+                    `Possível sync: ${event.domainA} ↔ ${event.domainB}`;
+
+                list.appendChild(item);
+            }
+        );
+
+        // Parâmetros potencialmente associados a tracking
+
+        trackingData.suspiciousParams.forEach(
+            (param) => {
+
+                const item =
+                    document.createElement("li");
+
+                let value = param.value;
+
+                // Evita valores enormes no popup
+                if (value.length > 30) {
+                    value =
+                        value.substring(0, 30) + "...";
+                }
+
+                item.textContent =
+                    `Parâmetro: ${param.parameter}=${value} (${param.domain})`;
+
+                list.appendChild(item);
+            }
+        );
+
+
+        if (!list.children.length) {
+
+            const item =
+                document.createElement("li");
+
+            item.textContent =
+                "Nenhuma evidência detectada.";
+
+            list.appendChild(item);
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "[Privacy Guard] Erro analisando tracking:",
+            error
+        );
+
+    }
+
 });

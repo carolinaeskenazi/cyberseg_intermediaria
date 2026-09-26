@@ -104,3 +104,25 @@ h2 {
 #canvas-events li {
     margin: 4px 0;
 }
+
+.tracking-details {
+    margin: 5px 0 10px 15px;
+    padding-left: 10px;
+    border-left: 2px solid #ddd;
+}
+
+#tracking-events-section {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+#tracking-events {
+    padding-left: 18px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+#tracking-events li {
+    margin: 4px 0;
+    word-break: break-word;
+}
