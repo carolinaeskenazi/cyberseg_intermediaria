@@ -5,6 +5,22 @@ browser.tabs.query({
 
     const currentTab = tabs[0];
 
+    const scoreInput = {
+        thirdPartyDomains: 0,
+
+        thirdPartyCookies: 0,
+        persistentCookies: 0,
+
+        localStorage: false,
+        sessionStorage: false,
+        indexedDB: false,
+
+        canvas: false,
+        cookieSync: false,
+        bounce: false,
+        hook: false
+    };
+
     if (!currentTab) {
         return;
     }
@@ -26,6 +42,9 @@ browser.tabs.query({
     const domains = Object.values(
         data.thirdPartyDomains || {}
     );
+
+    scoreInput.thirdPartyDomains =
+        domains.length;
 
     document.getElementById(
         "third-party-count"
@@ -93,6 +112,12 @@ browser.tabs.query({
         "cookie-persistent"
     ).textContent = cookieData.persistent;
 
+    scoreInput.thirdPartyCookies =
+        cookieData.thirdParty;
+
+    scoreInput.persistentCookies =
+        cookieData.persistent;
+
     // =========================================
     // STORAGE HTML5
     // =========================================
@@ -111,6 +136,9 @@ browser.tabs.query({
             storageData.localStorage.detected ||
             storageData.sessionStorage.detected ||
             storageData.indexedDB.detected;
+
+
+   
 
 
         document.getElementById(
@@ -162,6 +190,8 @@ browser.tabs.query({
         ).textContent = "Indisponível";
     }
 
+
+
     // =========================================
     // STORAGE POR FRAME / ORIGEM
     // =========================================
@@ -183,6 +213,25 @@ browser.tabs.query({
 
         const frames =
             Object.values(frameStorage);
+
+        const topFrame =
+            frames.find(
+                (frame) =>
+                    frame.context &&
+                    frame.context.isTopFrame
+            );
+
+        if (topFrame) {
+
+            scoreInput.localStorage =
+                topFrame.localStorage.detected;
+
+            scoreInput.sessionStorage =
+                topFrame.sessionStorage.detected;
+
+            scoreInput.indexedDB =
+                topFrame.indexedDB.detected;
+        }
 
         if (frames.length === 0) {
 
@@ -263,6 +312,11 @@ browser.tabs.query({
                     action: "getCanvasData"
                 }
             );
+
+        
+        
+        scoreInput.canvas =
+            canvasData.detected;
 
 
         document.getElementById(
@@ -350,6 +404,7 @@ browser.tabs.query({
         ).textContent = "Indisponível";
     }
 
+
     // =========================================
     // COOKIE SYNC / BOUNCE TRACKING
     // =========================================
@@ -361,6 +416,14 @@ browser.tabs.query({
                 action: "getTrackingData",
                 tabId: currentTab.id
             });
+
+
+        scoreInput.cookieSync =
+            trackingData.cookieSyncDetected;
+
+        scoreInput.bounce =
+            trackingData.bounceDetected;
+
 
 
         document.getElementById(
@@ -507,6 +570,7 @@ browser.tabs.query({
     }
 
 
+
     // =========================================
     // HIJACKING / HOOK
     // =========================================
@@ -520,6 +584,10 @@ browser.tabs.query({
                     action: "getHookData"
                 }
             );
+
+
+        scoreInput.hook =
+            hookData.thirdPartyWebSocketCount > 0;
 
 
         document.getElementById(
@@ -610,4 +678,235 @@ browser.tabs.query({
             "Indisponível";
     }
 
+
+
+
+    // =========================================
+    // PRIVACY SCORE
+    // =========================================
+
+    const scoreResult =
+        calculatePrivacyScore(
+            scoreInput
+        );
+
+
+    document.getElementById(
+        "privacy-score"
+    ).textContent =
+        `${scoreResult.score} / 100`;
+
+
+    const scoreBreakdown =
+        document.getElementById(
+            "score-breakdown"
+        );
+
+
+    scoreBreakdown.innerHTML = "";
+
+
+    if (
+        scoreResult.breakdown.length === 0
+    ) {
+
+        const item =
+            document.createElement("li");
+
+        item.textContent =
+            "Nenhuma penalidade aplicada.";
+
+        scoreBreakdown.appendChild(item);
+
+    } else {
+
+        scoreResult.breakdown.forEach(
+            (penalty) => {
+
+                const item =
+                    document.createElement("li");
+
+                item.textContent =
+                    `${penalty.label}: -${penalty.points}`;
+
+                scoreBreakdown.appendChild(
+                    item
+                );
+            }
+        );
+    }
+
 });
+
+function calculatePrivacyScore(data) {
+
+    let score = 100;
+
+    const breakdown = [];
+
+
+    function penalize(label, points) {
+
+        if (points <= 0) {
+            return;
+        }
+
+        score -= points;
+
+        breakdown.push({
+            label: label,
+            points: points
+        });
+    }
+
+
+    // =====================================
+    // DOMÍNIOS DE TERCEIRA PARTE
+    // Máximo: -20
+    // =====================================
+
+    let thirdPartyPenalty = 0;
+
+    if (data.thirdPartyDomains >= 21) {
+        thirdPartyPenalty = 20;
+    } else if (data.thirdPartyDomains >= 11) {
+        thirdPartyPenalty = 15;
+    } else if (data.thirdPartyDomains >= 6) {
+        thirdPartyPenalty = 10;
+    } else if (data.thirdPartyDomains >= 1) {
+        thirdPartyPenalty = 5;
+    }
+
+    penalize(
+        "Domínios de terceira parte",
+        thirdPartyPenalty
+    );
+
+
+    // =====================================
+    // COOKIES DE TERCEIRA PARTE
+    // Máximo: -15
+    // =====================================
+
+    let thirdPartyCookiePenalty = 0;
+
+    if (data.thirdPartyCookies >= 6) {
+        thirdPartyCookiePenalty = 15;
+    } else if (data.thirdPartyCookies >= 3) {
+        thirdPartyCookiePenalty = 10;
+    } else if (data.thirdPartyCookies >= 1) {
+        thirdPartyCookiePenalty = 5;
+    }
+
+    penalize(
+        "Cookies de terceira parte",
+        thirdPartyCookiePenalty
+    );
+
+
+    // =====================================
+    // COOKIES PERSISTENTES
+    // Máximo: -10
+    // =====================================
+
+    let persistentPenalty = 0;
+
+    if (data.persistentCookies >= 31) {
+        persistentPenalty = 10;
+    } else if (data.persistentCookies >= 11) {
+        persistentPenalty = 6;
+    } else if (data.persistentCookies >= 1) {
+        persistentPenalty = 3;
+    }
+
+    penalize(
+        "Cookies persistentes",
+        persistentPenalty
+    );
+
+
+    // =====================================
+    // STORAGE HTML5
+    // Máximo: -10
+    // =====================================
+
+    let storagePenalty = 0;
+
+    if (data.localStorage) {
+        storagePenalty += 4;
+    }
+
+    if (data.sessionStorage) {
+        storagePenalty += 2;
+    }
+
+    if (data.indexedDB) {
+        storagePenalty += 4;
+    }
+
+    penalize(
+        "Storage HTML5",
+        storagePenalty
+    );
+
+
+    // =====================================
+    // CANVAS
+    // =====================================
+
+    if (data.canvas) {
+        penalize(
+            "Canvas fingerprinting",
+            15
+        );
+    }
+
+
+    // =====================================
+    // COOKIE SYNC
+    // =====================================
+
+    if (data.cookieSync) {
+        penalize(
+            "Cookie sync",
+            15
+        );
+    }
+
+
+    // =====================================
+    // BOUNCE TRACKING
+    // =====================================
+
+    if (data.bounce) {
+        penalize(
+            "Bounce tracking",
+            10
+        );
+    }
+
+
+    // =====================================
+    // HIJACKING / HOOK
+    // =====================================
+
+    if (data.hook) {
+        penalize(
+            "WebSocket terceiro / Hook",
+            5
+        );
+    }
+
+
+    score =
+        Math.max(
+            0,
+            Math.min(100, score)
+        );
+
+
+    return {
+        score: score,
+        breakdown: breakdown
+    };
+}
