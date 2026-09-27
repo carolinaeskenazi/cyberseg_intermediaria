@@ -736,6 +736,178 @@ browser.tabs.query({
         );
     }
 
+    // =========================================
+    // BLOCKLIST PERSONALIZADA
+    // =========================================
+
+    const blocklistInput =
+        document.getElementById(
+            "blocklist-input"
+        );
+
+    const blocklistAdd =
+        document.getElementById(
+            "blocklist-add"
+        );
+
+    const blocklistList =
+        document.getElementById(
+            "blocklist-list"
+        );
+
+    const blocklistMessage =
+        document.getElementById(
+            "blocklist-message"
+        );
+
+
+    async function renderBlocklist() {
+
+        const blocklist =
+            await browser.runtime.sendMessage({
+                action: "getBlocklist"
+            });
+
+
+        blocklistList.innerHTML = "";
+
+
+        if (blocklist.length === 0) {
+
+            const item =
+                document.createElement("li");
+
+            item.textContent =
+                "Nenhum domínio bloqueado.";
+
+            blocklistList.appendChild(
+                item
+            );
+
+            return;
+        }
+
+
+        blocklist.forEach(
+            (domain) => {
+
+                const item =
+                    document.createElement("li");
+
+
+                const domainText =
+                    document.createElement(
+                        "span"
+                    );
+
+                domainText.textContent =
+                    domain;
+
+
+                const removeButton =
+                    document.createElement(
+                        "button"
+                    );
+
+                removeButton.textContent =
+                    "Remover";
+
+
+                removeButton.addEventListener(
+                    "click",
+
+                    async () => {
+
+                        await browser.runtime
+                            .sendMessage({
+                                action:
+                                    "removeFromBlocklist",
+
+                                domain:
+                                    domain
+                            });
+
+
+                        blocklistMessage.textContent =
+                            `${domain} removido da lista.`;
+
+
+                        await renderBlocklist();
+                    }
+                );
+
+
+                item.appendChild(
+                    domainText
+                );
+
+                item.appendChild(
+                    removeButton
+                );
+
+                blocklistList.appendChild(
+                    item
+                );
+            }
+        );
+    }
+
+
+    blocklistAdd.addEventListener(
+        "click",
+
+        async () => {
+
+            const domain =
+                blocklistInput.value.trim();
+
+
+            if (!domain) {
+
+                blocklistMessage.textContent =
+                    "Digite um domínio.";
+
+                return;
+            }
+
+
+            const result =
+                await browser.runtime
+                    .sendMessage({
+
+                        action:
+                            "addToBlocklist",
+
+                        domain:
+                            domain
+                    });
+
+
+            if (!result.success) {
+
+                blocklistMessage.textContent =
+                    result.error ||
+                    "Não foi possível adicionar.";
+
+                return;
+            }
+
+
+            blocklistMessage.textContent =
+                `${domain} adicionado à lista.`;
+
+
+            blocklistInput.value =
+                "";
+
+
+            await renderBlocklist();
+        }
+    );
+
+
+    await renderBlocklist();
+
 });
 
 function calculatePrivacyScore(data) {

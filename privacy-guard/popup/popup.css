@@ -164,3 +164,44 @@ h2 {
     margin: 4px 0;
     word-break: break-word;
 }
+
+#blocklist-section {
+    margin-top: 18px;
+}
+
+.blocklist-description {
+    font-size: 12px;
+}
+
+.blocklist-form {
+    display: flex;
+    gap: 6px;
+}
+
+#blocklist-input {
+    flex: 1;
+    min-width: 0;
+}
+
+#blocklist-add {
+    cursor: pointer;
+}
+
+#blocklist-list {
+    padding-left: 18px;
+}
+
+#blocklist-list li {
+    margin: 7px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#blocklist-list button {
+    cursor: pointer;
+}
+
+#blocklist-message {
+    font-size: 12px;
+}

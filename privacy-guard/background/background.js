@@ -9,6 +9,78 @@ const tabData = {};
 const trackingData = {};
 const frameStorageData = {};
 
+
+// ============================================================
+// BLOCKLIST PERSONALIZADA
+// ============================================================
+
+let customBlocklist = [];
+
+
+// Carrega a blocklist salva quando a extensão inicia.
+browser.storage.local
+    .get("customBlocklist")
+    .then((result) => {
+
+        customBlocklist =
+            Array.isArray(result.customBlocklist)
+                ? result.customBlocklist
+                : [];
+
+        console.log(
+            "[Privacy Guard] Blocklist carregada:",
+            customBlocklist
+        );
+    })
+    .catch((error) => {
+
+        console.error(
+            "[Privacy Guard] Erro carregando blocklist:",
+            error
+        );
+    });
+
+
+function normalizeBlocklistDomain(domain) {
+
+    if (!domain) {
+        return null;
+    }
+
+    return domain
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, "")
+        .replace(/^www\./, "")
+        .split("/")[0];
+}
+
+
+function isDomainBlocked(hostname) {
+
+    const normalized =
+        normalizeBlocklistDomain(
+            hostname
+        );
+
+    if (!normalized) {
+        return false;
+    }
+
+
+    return customBlocklist.some(
+        (blockedDomain) => {
+
+            return (
+                normalized === blockedDomain ||
+                normalized.endsWith(
+                    "." + blockedDomain
+                )
+            );
+        }
+    );
+}
+
 // ============================================================
 // FUNÇÕES AUXILIARES
 // ============================================================
@@ -369,6 +441,31 @@ browser.webRequest.onBeforeRequest.addListener(
             return;
         }
 
+        // ====================================================
+        // BLOCKLIST PERSONALIZADA
+        // ====================================================
+
+        const hostname =
+            getHostname(
+                details.url
+            );
+
+
+        if (
+            hostname &&
+            isDomainBlocked(hostname)
+        ) {
+
+            console.log(
+                "[Privacy Guard] Requisição bloqueada:",
+                details.url
+            );
+
+            return {
+                cancel: true
+            };
+        }
+
         initializeTab(details.tabId);
         initializeTracking(details.tabId);
 
@@ -522,7 +619,8 @@ browser.webRequest.onBeforeRequest.addListener(
 
     {
         urls: ["<all_urls>"]
-    }
+    },
+    ["blocking"]
 );
 
 
@@ -964,6 +1062,96 @@ function detectCookieSync(tabId) {
 browser.runtime.onMessage.addListener(
 
     (message, sender) => {
+
+        // ====================================================
+        // BLOCKLIST
+        // ====================================================
+
+        if (
+            message.action ===
+            "getBlocklist"
+        ) {
+
+            return Promise.resolve(
+                customBlocklist
+            );
+        }
+
+
+        if (
+            message.action ===
+            "addToBlocklist"
+        ) {
+
+            const domain =
+                normalizeBlocklistDomain(
+                    message.domain
+                );
+
+
+            if (!domain) {
+
+                return Promise.resolve({
+                    success: false,
+                    error: "Domínio inválido."
+                });
+            }
+
+
+            if (
+                !customBlocklist.includes(
+                    domain
+                )
+            ) {
+
+                customBlocklist.push(
+                    domain
+                );
+            }
+
+
+            return browser.storage.local
+                .set({
+                    customBlocklist:
+                        customBlocklist
+                })
+                .then(() => ({
+                    success: true,
+                    blocklist:
+                        customBlocklist
+                }));
+        }
+
+
+        if (
+            message.action ===
+            "removeFromBlocklist"
+        ) {
+
+            const domain =
+                normalizeBlocklistDomain(
+                    message.domain
+                );
+
+
+            customBlocklist =
+                customBlocklist.filter(
+                    (item) =>
+                        item !== domain
+                );
+
+
+            return browser.storage.local
+                .set({
+                    customBlocklist:
+                        customBlocklist
+                })
+                .then(() => ({
+                    success: true,
+                    blocklist:
+                        customBlocklist
+                }));
+        }
 
 
         // ====================================================
