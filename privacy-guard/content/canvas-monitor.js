@@ -1,12 +1,10 @@
 (() => {
 
-    if (window.__privacyGuardCanvasMonitor) {
-        return;
-    }
+    // ==========================================
+    // ENVIO DE EVENTOS DE CANVAS
+    // ==========================================
 
-    window.__privacyGuardCanvasMonitor = true;
-
-   function reportCanvasOperation(operation) {
+    function reportCanvasOperation(operation) {
 
         let stack = null;
 
@@ -25,8 +23,9 @@
         }, "*");
     }
 
+
     // ==========================================
-    // toDataURL()
+    // CANVAS — toDataURL()
     // ==========================================
 
     const originalToDataURL =
@@ -45,7 +44,7 @@
 
 
     // ==========================================
-    // toBlob()
+    // CANVAS — toBlob()
     // ==========================================
 
     const originalToBlob =
@@ -64,7 +63,7 @@
 
 
     // ==========================================
-    // getImageData()
+    // CANVAS — getImageData()
     // ==========================================
 
     const originalGetImageData =
@@ -73,12 +72,74 @@
     CanvasRenderingContext2D.prototype.getImageData =
         function (...args) {
 
-            reportCanvasOperation("getImageData");
+            reportCanvasOperation(
+                "getImageData"
+            );
 
             return originalGetImageData.apply(
                 this,
                 args
             );
         };
+
+
+    // ==========================================
+    // WEBSOCKET / INDICADOR DE HOOK
+    // ==========================================
+
+    const OriginalWebSocket =
+        window.WebSocket;
+
+
+    window.WebSocket =
+        function (...args) {
+
+            const url =
+                args[0];
+
+            let stack = null;
+
+            try {
+                stack =
+                    new Error().stack;
+            } catch (error) {
+                stack = null;
+            }
+
+
+            window.postMessage({
+                source: "privacy-guard",
+                type: "websocket-operation",
+                url: String(url),
+                timestamp: Date.now(),
+                stack: stack
+            }, "*");
+
+
+            return new OriginalWebSocket(
+                ...args
+            );
+        };
+
+
+    /*
+     * Mantém propriedades importantes da
+     * implementação original de WebSocket.
+     */
+
+    window.WebSocket.prototype =
+        OriginalWebSocket.prototype;
+
+    window.WebSocket.CONNECTING =
+        OriginalWebSocket.CONNECTING;
+
+    window.WebSocket.OPEN =
+        OriginalWebSocket.OPEN;
+
+    window.WebSocket.CLOSING =
+        OriginalWebSocket.CLOSING;
+
+    window.WebSocket.CLOSED =
+        OriginalWebSocket.CLOSED;
 
 })();

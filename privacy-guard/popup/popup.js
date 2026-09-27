@@ -506,4 +506,108 @@ browser.tabs.query({
 
     }
 
+
+    // =========================================
+    // HIJACKING / HOOK
+    // =========================================
+
+    try {
+
+        const hookData =
+            await browser.tabs.sendMessage(
+                currentTab.id,
+                {
+                    action: "getHookData"
+                }
+            );
+
+
+        document.getElementById(
+            "hook-status"
+        ).textContent =
+            hookData.detected
+                ? "Possível"
+                : "Não detectado";
+
+
+        document.getElementById(
+            "websocket-count"
+        ).textContent =
+            hookData.websocketCount;
+
+
+        document.getElementById(
+            "third-party-websocket-count"
+        ).textContent =
+            hookData.thirdPartyWebSocketCount;
+
+
+        const hookList =
+            document.getElementById(
+                "hook-events"
+            );
+
+
+        hookList.innerHTML = "";
+
+
+        hookData.websockets.forEach(
+            (event) => {
+
+                const item =
+                    document.createElement("li");
+
+
+                const classification =
+                    event.thirdParty
+                        ? "TERCEIRO"
+                        : "mesma origem";
+
+
+                item.textContent =
+                    `WebSocket: ${event.domain || event.url} ` +
+                    `(${classification})`;
+
+
+                if (event.stack) {
+                    item.title =
+                        event.stack;
+                }
+
+
+                hookList.appendChild(
+                    item
+                );
+            }
+        );
+
+
+        if (!hookList.children.length) {
+
+            const item =
+                document.createElement("li");
+
+            item.textContent =
+                "Nenhum indicador detectado.";
+
+            hookList.appendChild(
+                item
+            );
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "[Privacy Guard] Erro obtendo indicadores de hook:",
+            error
+        );
+
+
+        document.getElementById(
+            "hook-status"
+        ).textContent =
+            "Indisponível";
+    }
+
 });

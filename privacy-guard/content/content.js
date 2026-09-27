@@ -1,37 +1,54 @@
-console.log("[Privacy Guard] Content script carregado.");
+console.log(
+    "[Privacy Guard] Content script carregado."
+);
+
 
 // =========================================
-// CANVAS MONITOR
+// INJETA MONITOR NO CONTEXTO DA PÁGINA
 // =========================================
 
-const canvasScript = document.createElement("script");
+const canvasScript =
+    document.createElement("script");
+
 
 canvasScript.src =
     browser.runtime.getURL(
         "content/canvas-monitor.js"
     );
 
-canvasScript.onload = function () {
-    this.remove();
-};
+
+canvasScript.onload =
+    function () {
+        this.remove();
+    };
+
 
 (document.head || document.documentElement)
     .appendChild(canvasScript);
 
 
-//Coleta informações sobre armazenamento HTML5 da página.
+// =========================================
+// STORAGE HTML5
+// =========================================
 
 async function collectStorageData() {
 
     const storageData = {
 
-        // Contexto em que o storage foi observado
         context: {
-            origin: window.location.origin,
-            hostname: window.location.hostname,
-            url: window.location.href,
-            isTopFrame: window === window.top
+            origin:
+                window.location.origin,
+
+            hostname:
+                window.location.hostname,
+
+            url:
+                window.location.href,
+
+            isTopFrame:
+                window === window.top
         },
+
 
         localStorage: {
             detected: false,
@@ -39,11 +56,13 @@ async function collectStorageData() {
             accessible: false
         },
 
+
         sessionStorage: {
             detected: false,
             count: 0,
             accessible: false
         },
+
 
         indexedDB: {
             detected: false,
@@ -54,14 +73,15 @@ async function collectStorageData() {
     };
 
 
-    // =========================================
+    // =====================================
     // LOCAL STORAGE
-    // =========================================
+    // =====================================
 
     try {
 
         const localCount =
             localStorage.length;
+
 
         storageData.localStorage.accessible =
             true;
@@ -77,6 +97,7 @@ async function collectStorageData() {
         storageData.localStorage.accessible =
             false;
 
+
         console.warn(
             "[Privacy Guard] localStorage bloqueado/indisponível:",
             error
@@ -84,14 +105,15 @@ async function collectStorageData() {
     }
 
 
-    // =========================================
+    // =====================================
     // SESSION STORAGE
-    // =========================================
+    // =====================================
 
     try {
 
         const sessionCount =
             sessionStorage.length;
+
 
         storageData.sessionStorage.accessible =
             true;
@@ -107,6 +129,7 @@ async function collectStorageData() {
         storageData.sessionStorage.accessible =
             false;
 
+
         console.warn(
             "[Privacy Guard] sessionStorage bloqueado/indisponível:",
             error
@@ -114,9 +137,9 @@ async function collectStorageData() {
     }
 
 
-    // =========================================
-    // INDEXED DB
-    // =========================================
+    // =====================================
+    // INDEXEDDB
+    // =====================================
 
     try {
 
@@ -124,6 +147,7 @@ async function collectStorageData() {
 
             const databases =
                 await indexedDB.databases();
+
 
             storageData.indexedDB.accessible =
                 true;
@@ -134,29 +158,32 @@ async function collectStorageData() {
             storageData.indexedDB.detected =
                 databases.length > 0;
 
-            storageData.indexedDB.databases =
-                databases.map((database) => ({
-                    name:
-                        database.name || "Sem nome",
 
-                    version:
-                        database.version || null
-                }));
+            storageData.indexedDB.databases =
+                databases.map(
+                    (database) => ({
+                        name:
+                            database.name ||
+                            "Sem nome",
+
+                        version:
+                            database.version ||
+                            null
+                    })
+                );
 
         } else {
 
-            /*
-             * IndexedDB existe, mas databases()
-             * não está disponível.
-             */
             storageData.indexedDB.accessible =
-                typeof indexedDB !== "undefined";
+                typeof indexedDB !==
+                "undefined";
         }
 
     } catch (error) {
 
         storageData.indexedDB.accessible =
             false;
+
 
         console.warn(
             "[Privacy Guard] IndexedDB bloqueado/indisponível:",
@@ -168,16 +195,29 @@ async function collectStorageData() {
     return storageData;
 }
 
+
+// =========================================
+// ENVIA STORAGE DO FRAME AO BACKGROUND
+// =========================================
+
 async function reportStorageToBackground() {
+
     try {
-        const storageData = await collectStorageData();
+
+        const storageData =
+            await collectStorageData();
+
 
         await browser.runtime.sendMessage({
-            action: "reportFrameStorage",
-            storageData: storageData
+            action:
+                "reportFrameStorage",
+
+            storageData:
+                storageData
         });
 
     } catch (error) {
+
         console.warn(
             "[Privacy Guard] Erro ao reportar storage do frame:",
             error
@@ -185,18 +225,23 @@ async function reportStorageToBackground() {
     }
 }
 
+
 // =========================================
-// REPORTA STORAGE DESTE FRAME AO BACKGROUND
+// REPORTA APÓS O DOM ESTAR DISPONÍVEL
 // =========================================
 
 if (document.readyState === "loading") {
 
     window.addEventListener(
         "DOMContentLoaded",
+
         () => {
             reportStorageToBackground();
         },
-        { once: true }
+
+        {
+            once: true
+        }
     );
 
 } else {
@@ -204,84 +249,316 @@ if (document.readyState === "loading") {
     reportStorageToBackground();
 }
 
+
+// =========================================
+// EVENTOS DE CANVAS
+// =========================================
+
 const canvasEvents = {
+
     toDataURL: 0,
+
     toBlob: 0,
+
     getImageData: 0,
+
     events: []
 };
 
 
-window.addEventListener("message", (event) => {
+// =========================================
+// INDICADORES DE HOOK
+// =========================================
 
-    if (event.source !== window) {
-        return;
+const hookEvents = {
+    websockets: []
+};
+
+
+// =========================================
+// RECEBE EVENTOS DO SCRIPT INJETADO
+// =========================================
+
+window.addEventListener(
+    "message",
+
+    (event) => {
+
+        if (event.source !== window) {
+            return;
+        }
+
+
+        const data =
+            event.data;
+
+
+        if (
+            !data ||
+            data.source !== "privacy-guard"
+        ) {
+            return;
+        }
+
+
+        // =================================
+        // CANVAS
+        // =================================
+
+        if (
+            data.type ===
+            "canvas-operation"
+        ) {
+
+            if (
+                Object.prototype
+                    .hasOwnProperty.call(
+                        canvasEvents,
+                        data.operation
+                    )
+            ) {
+
+                canvasEvents[
+                    data.operation
+                ]++;
+
+
+                canvasEvents.events.push({
+                    operation:
+                        data.operation,
+
+                    timestamp:
+                        data.timestamp,
+
+                    stack:
+                        data.stack
+                });
+
+
+                console.log(
+                    "[Privacy Guard] Canvas:",
+                    data.operation
+                );
+            }
+
+
+            return;
+        }
+
+
+        // =================================
+        // WEBSOCKET
+        // =================================
+
+        if (
+            data.type ===
+            "websocket-operation"
+        ) {
+
+            hookEvents.websockets.push({
+
+                url:
+                    data.url,
+
+                timestamp:
+                    data.timestamp,
+
+                stack:
+                    data.stack
+            });
+
+
+            console.log(
+                "[Privacy Guard] WebSocket:",
+                data.url
+            );
+
+
+            return;
+        }
     }
+);
 
-    const data = event.data;
 
-    if (
-        !data ||
-        data.source !== "privacy-guard" ||
-        data.type !== "canvas-operation"
-    ) {
-        return;
+// =========================================
+// DOMÍNIO DE UM WEBSOCKET
+// =========================================
+
+function getDomainFromWebSocket(url) {
+
+    try {
+
+        return new URL(
+            url
+        ).hostname;
+
+    } catch (error) {
+
+        return null;
     }
+}
 
-    if (
-        Object.prototype.hasOwnProperty.call(
-            canvasEvents,
-            data.operation
-        )
-    ) {
 
-        canvasEvents[data.operation]++;
+// =========================================
+// DADOS DE HOOK
+// =========================================
 
-        canvasEvents.events.push({
-            operation: data.operation,
-            timestamp: data.timestamp,
-            stack: data.stack
-        });
+function getHookData() {
 
-        console.log(
-            "[Privacy Guard] Canvas:",
-            data.operation
+    const pageDomain =
+        window.location.hostname
+            .replace(/^www\./, "")
+            .toLowerCase();
+
+
+    const websockets =
+        hookEvents.websockets.map(
+            (event) => {
+
+                const domain =
+                    getDomainFromWebSocket(
+                        event.url
+                    );
+
+
+                const normalizedDomain =
+                    domain
+                        ? domain
+                            .replace(
+                                /^www\./,
+                                ""
+                            )
+                            .toLowerCase()
+                        : null;
+
+
+                const thirdParty =
+                    normalizedDomain &&
+                    normalizedDomain !==
+                        pageDomain &&
+                    !normalizedDomain.endsWith(
+                        "." + pageDomain
+                    );
+
+
+                return {
+                    ...event,
+
+                    domain:
+                        normalizedDomain,
+
+                    thirdParty:
+                        Boolean(
+                            thirdParty
+                        )
+                };
+            }
         );
+
+
+    const thirdPartyWebSockets =
+        websockets.filter(
+            (event) =>
+                event.thirdParty
+        );
+
+
+    return {
+
+        /*
+         * WebSocket para domínio terceiro é
+         * tratado como INDICADOR de possível
+         * hook/hijacking, não como confirmação.
+         */
+        detected:
+            thirdPartyWebSockets.length > 0,
+
+        websocketCount:
+            websockets.length,
+
+        thirdPartyWebSocketCount:
+            thirdPartyWebSockets.length,
+
+        websockets:
+            websockets
+    };
+}
+
+
+// =========================================
+// MENSAGENS DO POPUP
+// =========================================
+
+browser.runtime.onMessage.addListener(
+    (message) => {
+
+
+        // =================================
+        // STORAGE
+        // =================================
+
+        if (
+            message.action ===
+            "getStorageData"
+        ) {
+
+            return collectStorageData();
+        }
+
+
+        // =================================
+        // CANVAS
+        // =================================
+
+        if (
+            message.action ===
+            "getCanvasData"
+        ) {
+
+            const total =
+                canvasEvents.toDataURL +
+                canvasEvents.toBlob +
+                canvasEvents.getImageData;
+
+
+            return Promise.resolve({
+
+                detected:
+                    total > 0,
+
+                total:
+                    total,
+
+                operations: {
+
+                    toDataURL:
+                        canvasEvents.toDataURL,
+
+                    toBlob:
+                        canvasEvents.toBlob,
+
+                    getImageData:
+                        canvasEvents.getImageData
+                },
+
+                events:
+                    canvasEvents.events
+            });
+        }
+
+
+        // =================================
+        // HIJACKING / HOOK
+        // =================================
+
+        if (
+            message.action ===
+            "getHookData"
+        ) {
+
+            return Promise.resolve(
+                getHookData()
+            );
+        }
     }
-
-});
-
-//O popup solicita os dados ao content script.
-
-
-browser.runtime.onMessage.addListener((message) => {
-
-    if (message.action === "getStorageData") {
-        return collectStorageData();
-    }
-
-
-    if (message.action === "getCanvasData") {
-
-        const total =
-            canvasEvents.toDataURL +
-            canvasEvents.toBlob +
-            canvasEvents.getImageData;
-
-        return Promise.resolve({
-
-            detected: total > 0,
-
-            total: total,
-
-            operations: {
-                toDataURL: canvasEvents.toDataURL,
-                toBlob: canvasEvents.toBlob,
-                getImageData: canvasEvents.getImageData
-            },
-
-            events: canvasEvents.events
-        });
-    }
-
-});
+);
